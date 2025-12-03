@@ -14,16 +14,372 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      nova_budget_tracking: {
+        Row: {
+          actual_cost: number | null
+          created_at: string
+          department: string
+          estimated_cost: number | null
+          id: string
+          is_finalized: boolean | null
+          project_id: string
+          proof_reason: string | null
+          proof_url: string | null
+          scene_id: string
+          submitted_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          actual_cost?: number | null
+          created_at?: string
+          department: string
+          estimated_cost?: number | null
+          id?: string
+          is_finalized?: boolean | null
+          project_id: string
+          proof_reason?: string | null
+          proof_url?: string | null
+          scene_id: string
+          submitted_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          actual_cost?: number | null
+          created_at?: string
+          department?: string
+          estimated_cost?: number | null
+          id?: string
+          is_finalized?: boolean | null
+          project_id?: string
+          proof_reason?: string | null
+          proof_url?: string | null
+          scene_id?: string
+          submitted_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nova_budget_tracking_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "nova_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nova_budget_tracking_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "nova_scenes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nova_day_scenes: {
+        Row: {
+          call_time: string | null
+          created_at: string
+          id: string
+          scene_id: string
+          scene_status: string | null
+          shoot_day_id: string
+        }
+        Insert: {
+          call_time?: string | null
+          created_at?: string
+          id?: string
+          scene_id: string
+          scene_status?: string | null
+          shoot_day_id: string
+        }
+        Update: {
+          call_time?: string | null
+          created_at?: string
+          id?: string
+          scene_id?: string
+          scene_status?: string | null
+          shoot_day_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nova_day_scenes_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "nova_scenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nova_day_scenes_shoot_day_id_fkey"
+            columns: ["shoot_day_id"]
+            isOneToOne: false
+            referencedRelation: "nova_shoot_days"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nova_project_members: {
+        Row: {
+          id: string
+          joined_at: string
+          project_id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          joined_at?: string
+          project_id: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          joined_at?: string
+          project_id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nova_project_members_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "nova_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nova_projects: {
+        Row: {
+          created_at: string
+          creator_id: string
+          id: string
+          name: string
+          passkey: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          creator_id: string
+          id?: string
+          name: string
+          passkey: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          creator_id?: string
+          id?: string
+          name?: string
+          passkey?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      nova_scenes: {
+        Row: {
+          camera_movement: string | null
+          characters_present: string | null
+          content: string | null
+          created_at: string
+          decorative_props: string | null
+          diegetic_sounds: string | null
+          emotional_arc: string | null
+          extras: string | null
+          framing: string | null
+          functional_props: string | null
+          heading: string | null
+          id: string
+          lighting: string | null
+          lighting_mood: string | null
+          location_type: string | null
+          pacing: string | null
+          primary_action: string | null
+          project_id: string
+          scene_mood: string | null
+          scene_number: number
+          shoot_type: string | null
+          speaking_roles: string | null
+          specific_location: string | null
+          status: string | null
+          time_of_day: string | null
+          updated_at: string
+        }
+        Insert: {
+          camera_movement?: string | null
+          characters_present?: string | null
+          content?: string | null
+          created_at?: string
+          decorative_props?: string | null
+          diegetic_sounds?: string | null
+          emotional_arc?: string | null
+          extras?: string | null
+          framing?: string | null
+          functional_props?: string | null
+          heading?: string | null
+          id?: string
+          lighting?: string | null
+          lighting_mood?: string | null
+          location_type?: string | null
+          pacing?: string | null
+          primary_action?: string | null
+          project_id: string
+          scene_mood?: string | null
+          scene_number?: number
+          shoot_type?: string | null
+          speaking_roles?: string | null
+          specific_location?: string | null
+          status?: string | null
+          time_of_day?: string | null
+          updated_at?: string
+        }
+        Update: {
+          camera_movement?: string | null
+          characters_present?: string | null
+          content?: string | null
+          created_at?: string
+          decorative_props?: string | null
+          diegetic_sounds?: string | null
+          emotional_arc?: string | null
+          extras?: string | null
+          framing?: string | null
+          functional_props?: string | null
+          heading?: string | null
+          id?: string
+          lighting?: string | null
+          lighting_mood?: string | null
+          location_type?: string | null
+          pacing?: string | null
+          primary_action?: string | null
+          project_id?: string
+          scene_mood?: string | null
+          scene_number?: number
+          shoot_type?: string | null
+          speaking_roles?: string | null
+          specific_location?: string | null
+          status?: string | null
+          time_of_day?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nova_scenes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "nova_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nova_shoot_days: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          project_id: string
+          shoot_date: string
+          status: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          project_id: string
+          shoot_date: string
+          status?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          project_id?: string
+          shoot_date?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nova_shoot_days_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "nova_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string
+          id: string
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          role?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_project_creator: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_project_member: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+      join_project_with_passkey: {
+        Args: { p_passkey: string; p_project_name: string; p_user_id: string }
+        Returns: Json
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +506,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+    },
   },
 } as const
