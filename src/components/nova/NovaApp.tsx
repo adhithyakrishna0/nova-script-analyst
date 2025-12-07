@@ -6,6 +6,10 @@ import { Sidebar } from './Sidebar';
 import { Dashboard } from './Dashboard';
 import { ScenesPage } from './ScenesPage';
 import { BudgetPage } from './BudgetPage';
+import { NotificationsPage } from './NotificationsPage';
+import { SchedulesPage } from './SchedulesPage';
+import { CrewPage } from './CrewPage';
+import { CallSheetPage } from './CallSheetPage';
 import { Loader2 } from 'lucide-react';
 
 export function NovaApp() {
@@ -17,9 +21,14 @@ export function NovaApp() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <Loader2 className="animate-spin text-primary mx-auto mb-4" size={48} />
-          <h1 className="nova-title text-3xl text-primary">NOVA</h1>
-          <p className="text-muted-foreground mt-2">Loading...</p>
+          <div className="relative">
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-accent mx-auto flex items-center justify-center animate-pulse">
+              <Loader2 className="animate-spin text-primary-foreground" size={32} />
+            </div>
+            <div className="absolute inset-0 rounded-2xl bg-primary/20 blur-xl animate-pulse" />
+          </div>
+          <h1 className="nova-title text-3xl text-primary mt-6">NOVA</h1>
+          <p className="text-muted-foreground mt-2">Initializing production suite...</p>
         </div>
       </div>
     );
@@ -49,34 +58,31 @@ export function NovaApp() {
         currentProject={currentProject}
       />
       
-      <main className="ml-64 p-8">
-        {currentPage === 'dashboard' && (
-          <Dashboard onSelectProject={handleSelectProject} />
-        )}
-        {currentPage === 'scenes' && currentProject && (
-          <ScenesPage project={currentProject} />
-        )}
-        {currentPage === 'budget' && currentProject && (
-          <BudgetPage project={currentProject} />
-        )}
-        {currentPage === 'schedules' && currentProject && (
-          <div className="animate-fade-in">
-            <h1 className="font-cinzel text-3xl font-bold mb-4">Schedules</h1>
-            <p className="text-muted-foreground">Schedule management coming soon...</p>
-          </div>
-        )}
-        {currentPage === 'crew' && currentProject && (
-          <div className="animate-fade-in">
-            <h1 className="font-cinzel text-3xl font-bold mb-4">Crew</h1>
-            <p className="text-muted-foreground">Crew management coming soon...</p>
-          </div>
-        )}
-        {currentPage === 'callsheet' && currentProject && (
-          <div className="animate-fade-in">
-            <h1 className="font-cinzel text-3xl font-bold mb-4">Call Sheet</h1>
-            <p className="text-muted-foreground">Call sheet generation coming soon...</p>
-          </div>
-        )}
+      {/* Dynamic margin based on sidebar state */}
+      <main className="ml-16 hover:ml-16 p-8 transition-all duration-300">
+        <div className="max-w-7xl mx-auto">
+          {currentPage === 'dashboard' && (
+            <Dashboard onSelectProject={handleSelectProject} />
+          )}
+          {currentPage === 'notifications' && (
+            <NotificationsPage />
+          )}
+          {currentPage === 'scenes' && currentProject && (
+            <ScenesPage project={currentProject} />
+          )}
+          {currentPage === 'budget' && currentProject && (
+            <BudgetPage project={currentProject} />
+          )}
+          {currentPage === 'schedules' && currentProject && (
+            <SchedulesPage project={currentProject} />
+          )}
+          {currentPage === 'crew' && currentProject && (
+            <CrewPage project={currentProject} />
+          )}
+          {currentPage === 'callsheet' && currentProject && (
+            <CallSheetPage project={currentProject} />
+          )}
+        </div>
       </main>
     </div>
   );

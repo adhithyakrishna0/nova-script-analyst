@@ -116,6 +116,57 @@ export type Database = {
           },
         ]
       }
+      nova_notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean | null
+          message: string
+          project_id: string | null
+          related_scene_id: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message: string
+          project_id?: string | null
+          related_scene_id?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          project_id?: string | null
+          related_scene_id?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nova_notifications_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "nova_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nova_notifications_related_scene_id_fkey"
+            columns: ["related_scene_id"]
+            isOneToOne: false
+            referencedRelation: "nova_scenes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       nova_project_members: {
         Row: {
           id: string

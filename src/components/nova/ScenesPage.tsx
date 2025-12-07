@@ -7,10 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { Upload, FileText, Save, Trash2, ChevronDown, DollarSign, Loader2 } from 'lucide-react';
+import { Upload, FileText, Save, Trash2, ChevronDown, DollarSign, Loader2, FileUp, Sparkles } from 'lucide-react';
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Set up PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 interface ScenesPageProps {
   project: Project;
@@ -32,26 +36,68 @@ export function ScenesPage({ project }: ScenesPageProps) {
   const [proofReason, setProofReason] = useState('');
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchScenes();
   }, [fetchScenes]);
 
+  const extractTextFromPDF = async (file: File): Promise<string> => {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let fullText = '';
+      
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item: any) => item.str)
+          .join(' ');
+        fullText += pageText + '\n\n';
+      }
+      
+      return fullText;
+    } catch (error) {
+      console.error('PDF parsing error:', error);
+      throw new Error('Failed to parse PDF file');
+    }
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    await processFile(file);
+  };
+
+  const processFile = async (file: File) => {
+    const fileName = file.name.toLowerCase();
+    const isPDF = fileName.endsWith('.pdf');
+    const isTXT = fileName.endsWith('.txt');
     
-    if (!file.name.endsWith('.txt')) {
-      toast({ title: "Error", description: "Only .txt files are supported", variant: "destructive" });
+    if (!isPDF && !isTXT) {
+      toast({ title: "Error", description: "Only .txt and .pdf files are supported", variant: "destructive" });
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const text = event.target?.result as string;
-      setShowUploadModal(false);
+    setShowUploadModal(false);
+    
+    try {
+      let text: string;
       
+      if (isPDF) {
+        toast({ title: "Processing", description: "Extracting text from PDF..." });
+        text = await extractTextFromPDF(file);
+      } else {
+        text = await file.text();
+      }
+
+      if (!text.trim()) {
+        toast({ title: "Error", description: "File appears to be empty", variant: "destructive" });
+        return;
+      }
+
       const { error, count } = await analyzeScript(text);
       
       if (error) {
@@ -59,8 +105,29 @@ export function ScenesPage({ project }: ScenesPageProps) {
       } else {
         toast({ title: "Success", description: `Successfully imported ${count} scenes!` });
       }
-    };
-    reader.readAsText(file);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to process file", variant: "destructive" });
+    }
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      await processFile(e.dataTransfer.files[0]);
+    }
   };
 
   const handleSaveScene = async () => {
@@ -176,7 +243,7 @@ export function ScenesPage({ project }: ScenesPageProps) {
         {isManager && (
           <Button 
             onClick={() => setShowUploadModal(true)}
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
+            className="bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90 transition-opacity"
           >
             <Upload size={18} className="mr-2" />
             Upload Script
@@ -185,7 +252,14 @@ export function ScenesPage({ project }: ScenesPageProps) {
       </div>
 
       <div className="nova-card">
-        <h2 className="font-cinzel text-xl font-semibold mb-6">Scene List</h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="font-cinzel text-xl font-semibold">Scene List</h2>
+          {scenes.length > 0 && (
+            <span className="text-sm text-muted-foreground">
+              {scenes.length} scene{scenes.length !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-12">
@@ -193,33 +267,36 @@ export function ScenesPage({ project }: ScenesPageProps) {
           </div>
         ) : scenes.length === 0 ? (
           <div className="text-center py-12">
-            <div className="text-5xl mb-4">📝</div>
+            <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center mb-4">
+              <FileText className="text-primary" size={32} />
+            </div>
             <h3 className="font-cinzel text-xl mb-2">No Scenes Yet</h3>
-            <p className="text-muted-foreground mb-6">
+            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
               {isManager 
-                ? 'Upload a script to automatically generate scenes with AI analysis'
+                ? 'Upload a screenplay (PDF or TXT) and let AI analyze and break it down into scenes automatically'
                 : 'Scenes will appear here when the production team adds them'
               }
             </p>
             {isManager && (
               <Button 
                 onClick={() => setShowUploadModal(true)}
-                className="bg-primary text-primary-foreground"
+                className="bg-gradient-to-r from-primary to-accent text-primary-foreground"
               >
-                <FileText size={18} className="mr-2" />
-                Upload Script
+                <Sparkles size={18} className="mr-2" />
+                Upload & Analyze Script
               </Button>
             )}
           </div>
         ) : (
-          <div className="space-y-4">
-            {scenes.map((scene) => (
+          <div className="space-y-3">
+            {scenes.map((scene, index) => (
               <div
                 key={scene.id}
                 className={cn(
                   "scene-card transition-all duration-300",
-                  expandedScene === scene.id && "expanded"
+                  expandedScene === scene.id && "expanded ring-1 ring-primary/30"
                 )}
+                style={{ animationDelay: `${index * 50}ms` }}
               >
                 <div 
                   onClick={() => toggleSceneExpand(scene.id)}
@@ -245,7 +322,7 @@ export function ScenesPage({ project }: ScenesPageProps) {
                   <ChevronDown 
                     size={20} 
                     className={cn(
-                      "text-muted-foreground transition-transform",
+                      "text-muted-foreground transition-transform duration-300",
                       expandedScene === scene.id && "rotate-180"
                     )} 
                   />
@@ -352,25 +429,60 @@ export function ScenesPage({ project }: ScenesPageProps) {
         <DialogContent className="bg-card border-primary/20">
           <DialogHeader>
             <DialogTitle className="font-cinzel text-2xl">Upload & Analyze Script</DialogTitle>
+            <DialogDescription>
+              Upload your screenplay file and let AI analyze it into detailed scene breakdowns
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
-            <div>
-              <Label className="text-sm font-semibold uppercase tracking-wide">Script File (.txt format)</Label>
+            <div
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+              className={cn(
+                "border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 cursor-pointer",
+                dragActive 
+                  ? "border-primary bg-primary/10 scale-[1.02]" 
+                  : "border-primary/30 hover:border-primary/50 hover:bg-primary/5"
+              )}
+              onClick={() => fileInputRef.current?.click()}
+            >
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".txt"
+                accept=".txt,.pdf"
                 onChange={handleFileUpload}
-                className="mt-2 w-full p-3 bg-background/40 border border-primary/30 rounded-md text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-primary file:text-primary-foreground file:cursor-pointer"
+                className="hidden"
               />
-              <p className="text-xs text-muted-foreground mt-2">
-                Upload a properly formatted screenplay in .txt format. The AI will analyze and break it down into scenes.
+              <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center mb-4">
+                <FileUp className="text-primary" size={28} />
+              </div>
+              <p className="text-foreground font-medium mb-2">
+                Drag & drop your script here
               </p>
+              <p className="text-sm text-muted-foreground mb-4">
+                or click to browse
+              </p>
+              <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground">
+                <span className="px-2 py-1 rounded-full bg-primary/10">.PDF</span>
+                <span className="px-2 py-1 rounded-full bg-primary/10">.TXT</span>
+              </div>
             </div>
+            
             {analyzing && (
-              <div className="flex items-center justify-center py-6">
-                <Loader2 className="animate-spin text-primary mr-3" size={24} />
-                <span className="text-muted-foreground">Analyzing script with Gemini AI... This may take up to 30 seconds.</span>
+              <div className="flex items-center justify-center py-6 bg-background/40 rounded-lg">
+                <div className="text-center">
+                  <div className="relative inline-block">
+                    <Loader2 className="animate-spin text-primary" size={32} />
+                    <div className="absolute inset-0 rounded-full bg-primary/20 blur-lg animate-pulse" />
+                  </div>
+                  <p className="text-muted-foreground mt-3">
+                    Analyzing script with AI...
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    This may take 15-30 seconds
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -382,9 +494,11 @@ export function ScenesPage({ project }: ScenesPageProps) {
         <DialogContent className="bg-card border-primary/20">
           <DialogHeader>
             <DialogTitle className="font-cinzel text-2xl">{userDepartment} Budget</DialogTitle>
+            <DialogDescription>
+              Enter your estimated cost for this scene
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
-            <p className="text-muted-foreground text-sm">Enter your estimated cost for this scene</p>
             <div>
               <Label className="text-sm font-semibold uppercase tracking-wide">Estimated Cost (₹)</Label>
               <Input
@@ -412,6 +526,9 @@ export function ScenesPage({ project }: ScenesPageProps) {
         <DialogContent className="bg-card border-primary/20">
           <DialogHeader>
             <DialogTitle className="font-cinzel text-2xl">Submit Actual Costs</DialogTitle>
+            <DialogDescription>
+              Record actual expenses with optional proof documentation
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
             <div>
@@ -425,24 +542,23 @@ export function ScenesPage({ project }: ScenesPageProps) {
               />
             </div>
             <div>
-              <Label className="text-sm font-semibold uppercase tracking-wide">Reason (if over budget)</Label>
+              <Label className="text-sm font-semibold uppercase tracking-wide">Reason / Notes (Optional)</Label>
               <Textarea
                 value={proofReason}
                 onChange={(e) => setProofReason(e.target.value)}
-                placeholder="Explain any budget variance..."
-                rows={3}
+                placeholder="Explain cost differences or provide details..."
                 className="mt-2 bg-background/40 border-primary/30"
+                rows={3}
               />
             </div>
             <div>
-              <Label className="text-sm font-semibold uppercase tracking-wide">Upload Proof (Optional)</Label>
+              <Label className="text-sm font-semibold uppercase tracking-wide">Proof Document (Optional)</Label>
               <input
                 type="file"
                 accept=".pdf,.jpg,.jpeg,.png"
                 onChange={(e) => setProofFile(e.target.files?.[0] || null)}
                 className="mt-2 w-full p-3 bg-background/40 border border-primary/30 rounded-md text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-primary file:text-primary-foreground file:cursor-pointer"
               />
-              <p className="text-xs text-muted-foreground mt-1">Accepted: PDF, JPG, PNG</p>
             </div>
             <Button 
               onClick={handleSaveActualCost}
@@ -450,7 +566,7 @@ export function ScenesPage({ project }: ScenesPageProps) {
               className="w-full bg-primary text-primary-foreground"
             >
               {submitting ? <Loader2 className="animate-spin mr-2" size={18} /> : null}
-              Submit Actual Costs
+              Submit Actual Cost
             </Button>
           </div>
         </DialogContent>
