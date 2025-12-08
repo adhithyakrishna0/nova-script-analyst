@@ -11,10 +11,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Upload, FileText, Save, Trash2, ChevronDown, DollarSign, Loader2, FileUp, Sparkles } from 'lucide-react';
-import * as pdfjsLib from 'pdfjs-dist';
-
-// Set up PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 interface ScenesPageProps {
   project: Project;
@@ -43,28 +39,6 @@ export function ScenesPage({ project }: ScenesPageProps) {
     fetchScenes();
   }, [fetchScenes]);
 
-  const extractTextFromPDF = async (file: File): Promise<string> => {
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      let fullText = '';
-      
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items
-          .map((item: any) => item.str)
-          .join(' ');
-        fullText += pageText + '\n\n';
-      }
-      
-      return fullText;
-    } catch (error) {
-      console.error('PDF parsing error:', error);
-      throw new Error('Failed to parse PDF file');
-    }
-  };
-
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -84,26 +58,37 @@ export function ScenesPage({ project }: ScenesPageProps) {
     setShowUploadModal(false);
     
     try {
-      let text: string;
-      
       if (isPDF) {
-        toast({ title: "Processing", description: "Extracting text from PDF..." });
-        text = await extractTextFromPDF(file);
+        // Send PDF as base64 to the edge function for server-side parsing
+        toast({ title: "Processing", description: "Uploading and analyzing PDF..." });
+        const arrayBuffer = await file.arrayBuffer();
+        const base64 = btoa(
+          new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+        );
+        
+        const { error, count } = await analyzeScript('', base64);
+        
+        if (error) {
+          toast({ title: "Error", description: error.message, variant: "destructive" });
+        } else {
+          toast({ title: "Success", description: `Successfully imported ${count} scenes!` });
+        }
       } else {
-        text = await file.text();
-      }
+        // Handle text files directly
+        const text = await file.text();
 
-      if (!text.trim()) {
-        toast({ title: "Error", description: "File appears to be empty", variant: "destructive" });
-        return;
-      }
+        if (!text.trim()) {
+          toast({ title: "Error", description: "File appears to be empty", variant: "destructive" });
+          return;
+        }
 
-      const { error, count } = await analyzeScript(text);
-      
-      if (error) {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
-      } else {
-        toast({ title: "Success", description: `Successfully imported ${count} scenes!` });
+        const { error, count } = await analyzeScript(text);
+        
+        if (error) {
+          toast({ title: "Error", description: error.message, variant: "destructive" });
+        } else {
+          toast({ title: "Success", description: `Successfully imported ${count} scenes!` });
+        }
       }
     } catch (error: any) {
       toast({ title: "Error", description: error.message || "Failed to process file", variant: "destructive" });

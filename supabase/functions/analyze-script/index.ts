@@ -5,6 +5,66 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Simple PDF text extractor - extracts text content from PDF
+function extractTextFromPDF(pdfData: Uint8Array): string {
+  try {
+    // Convert to string for text extraction
+    const decoder = new TextDecoder('latin1');
+    const pdfString = decoder.decode(pdfData);
+    
+    // Extract text between stream and endstream markers
+    const textParts: string[] = [];
+    
+    // Pattern to find text content in PDF streams
+    const streamRegex = /stream\s*([\s\S]*?)\s*endstream/gi;
+    let match;
+    
+    while ((match = streamRegex.exec(pdfString)) !== null) {
+      const streamContent = match[1];
+      
+      // Extract text from Tj and TJ operators (PDF text operators)
+      const textMatches = streamContent.match(/\(([^)]*)\)\s*Tj|\[((?:[^[\]]*|\[[^\]]*\])*)\]\s*TJ/gi);
+      
+      if (textMatches) {
+        for (const textMatch of textMatches) {
+          // Extract text from parentheses
+          const parenMatch = textMatch.match(/\(([^)]*)\)/g);
+          if (parenMatch) {
+            for (const paren of parenMatch) {
+              const text = paren.slice(1, -1)
+                .replace(/\\n/g, '\n')
+                .replace(/\\r/g, '')
+                .replace(/\\t/g, ' ')
+                .replace(/\\\\/g, '\\')
+                .replace(/\\'/g, "'")
+                .replace(/\\"/g, '"');
+              if (text.trim()) {
+                textParts.push(text);
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // Also try to extract any readable text content
+    const readableText = pdfString
+      .replace(/[^\x20-\x7E\n\r\t]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    // If we found text parts, use them; otherwise use the readable text
+    const extractedText = textParts.length > 0 
+      ? textParts.join(' ') 
+      : readableText.substring(0, 50000);
+    
+    return extractedText;
+  } catch (error) {
+    console.error('PDF extraction error:', error);
+    throw new Error('Failed to extract text from PDF');
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -12,11 +72,40 @@ serve(async (req) => {
   }
 
   try {
-    const { scriptText } = await req.json();
+    const body = await req.json();
+    let scriptText = body.scriptText;
+    const pdfBase64 = body.pdfBase64;
     
-    if (!scriptText) {
+    // If PDF is provided, extract text from it
+    if (pdfBase64) {
+      console.log('Extracting text from PDF...');
+      
+      // Decode base64 to Uint8Array
+      const binaryString = atob(pdfBase64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      
+      scriptText = extractTextFromPDF(bytes);
+      console.log(`Extracted ${scriptText.length} characters from PDF`);
+      
+      // If extraction failed or returned very little text, try sending the raw content
+      if (scriptText.length < 100) {
+        console.log('PDF text extraction returned minimal text, using raw content approach');
+        // Try to get any readable text
+        const decoder = new TextDecoder('utf-8', { fatal: false });
+        const rawText = decoder.decode(bytes);
+        const cleanText = rawText.replace(/[^\x20-\x7E\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim();
+        if (cleanText.length > scriptText.length) {
+          scriptText = cleanText;
+        }
+      }
+    }
+    
+    if (!scriptText || !scriptText.trim() || scriptText.trim().length < 50) {
       return new Response(
-        JSON.stringify({ error: 'Script text is required' }),
+        JSON.stringify({ error: 'Could not extract text from file. Please try a text file (.txt) instead.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

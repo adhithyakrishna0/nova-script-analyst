@@ -33,13 +33,13 @@ export function useScenes(projectId: string | null) {
     }
   }, [projectId]);
 
-  const analyzeScript = async (scriptText: string) => {
+  const analyzeScript = async (scriptText: string, pdfBase64?: string) => {
     if (!projectId) return { error: new Error('No project selected') };
     
     setAnalyzing(true);
     try {
       const { data, error } = await supabase.functions.invoke('analyze-script', {
-        body: { scriptText }
+        body: pdfBase64 ? { pdfBase64 } : { scriptText }
       });
 
       if (error) throw error;
